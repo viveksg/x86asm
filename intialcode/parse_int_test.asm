@@ -2,15 +2,31 @@ segment .text
 global _start
 
 _start:
+  ; display input message
   push MSG
   push MSG_LEN
   call _write
+
+  ; read user input
   push num
   push INP_LEN
   call _read
   pop eax
-  push int_num
+
+  ; allocate memory
+  push initial_addr
+  push ALLOC_SIZE
+  call _int_malloc
+  pop ebx
+  pop ecx
+  ; parse 
+  mov eax, [initial_addr]
+  push eax
+  xor eax, eax
   call _parseInt
+  
+  ; free memory
+  call _free_memory
   call _exit
 
 _read:
@@ -147,7 +163,38 @@ _not_int:
    ret 
 
 _int_malloc:
-  nop
+  push ebp
+  mov ebp, esp
+  mov edx, [ebp + 0xc]; initial address
+  mov ecx, [ebp + 0x8]; allocation size
+  ;invalid address allocation call to get current top limit
+  mov eax, BRK
+  mov ebx, INVALID_ADDR
+  int 0x80
+  mov [edx], eax
+ 
+  ; allocation above current_top_limit
+  mov eax, BRK
+  mov ebx, [edx]
+  add ebx, ecx
+  int 0x80
+
+  exit_int_malloc:
+  mov esp, ebp
+  pop ebp
+  ret
+
+_free_memory:
+  push ebp
+  mov ebp, esp
+  mov eax, BRK
+  mov ebx, [ebp + 0x8]
+  int 0x80
+  exit_free_memory:
+    mov esp, ebp
+    pop ebp
+    ret
+
 _exit:
   mov eax, SYS_EXIT
   xor ebx, ebx
@@ -171,7 +218,12 @@ segment .data
   ZERO_IND equ 0x30
   NINE_IND equ 0x39
   SPACE equ 0x20
+  BRK equ 0x2d
+  INVALID_ADDR equ 0
+  ALLOC_SIZE equ 4
 
 segment .bss
   num resb 20
   int_num resb 4
+  initial_addr resb 4
+  curr_addr resb 4
