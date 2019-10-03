@@ -95,6 +95,11 @@ _parseInt:
       imul ecx, 0xa
       pop eax
       add ecx ,eax
+      cmp ecx, [ebx]
+      jg _save_result
+      call _raise_overflow_exception
+
+      _save_result:
       mov [ebx], ecx
       pop ebx
       pop ecx      
@@ -119,22 +124,16 @@ _parseInt:
   _exit_negative_conversion:
     nop 
 
-  _overflow_check: ; needs to be fixed
-    mov eax, 0x1
-    shl eax, 31
-    and eax, ebx
-    cmp ebx, eax
-    je _exit_overflow_check
-    push OVER_FLOW_MSG
-    push OF_EXC_LEN
-    call _write
-  
-  _exit_overflow_check:
-    nop  
   _exit_parse_int:
     mov esp, ebp
     pop ebp
     ret 
+
+_raise_overflow_exception:
+  push OVER_FLOW_MSG
+  push OF_EXC_LEN
+  call _write
+  call _exit
 
 _not_int:
  push ebp
@@ -147,7 +146,6 @@ _not_int:
    pop ebp
    ret 
 
-_check_overflow:
 _int_malloc:
   nop
 _exit:
